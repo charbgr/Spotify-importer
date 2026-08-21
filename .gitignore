@@ -1,0 +1,4 @@
+node_modules/
+spotify-import-report.json
+spotify-import-progress-*.json
+.DS_Store
