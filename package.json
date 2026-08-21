@@ -15,7 +15,7 @@
     "start:prod": "node dist/main.js",
     "typecheck": "npm run prisma:generate && tsc --noEmit",
     "spotify:import": "ts-node spotify-import.ts",
-    "desktop:build": "tsc -p electron/tsconfig.json && cp -R electron/renderer electron-dist/renderer",
+    "desktop:build": "tsc -p electron/tsconfig.json && mkdir -p electron-dist/renderer && cp -R electron/renderer/. electron-dist/renderer",
     "desktop": "npm run desktop:build && electron electron-dist/main.js",
     "app": "npm run desktop"
   },
