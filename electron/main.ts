@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import { parseFile } from 'music-metadata';
 import { URL } from 'node:url';
 
 type ImportStatus = 'not imported yet' | 'matched' | 'imported' | 'failed';
@@ -49,17 +50,69 @@ function walkMp3Files(root: string): string[] {
   });
 }
 
-function parseFilename(filePath: string): { artist?: string; track: string; query: string } {
+type TrackCandidate = {
+  artist?: string;
+  track: string;
+  album?: string;
+  query: string;
+};
+
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function tokenSimilarity(left: string, right: string): number {
+  const leftTokens = new Set(normalizeText(left).split(' ').filter(Boolean));
+  const rightTokens = new Set(normalizeText(right).split(' ').filter(Boolean));
+  if (!leftTokens.size || !rightTokens.size) return 0;
+  const overlap = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+  return overlap / new Set([...leftTokens, ...rightTokens]).size;
+}
+
+function parseFilename(filePath: string): TrackCandidate[] {
   const filename = path.basename(filePath, path.extname(filePath));
   const cleaned = filename
-    .replace(/^\d+\s*[-_. ]\s*/, '')
-    .replace(/\[[^\]]+\]/g, '')
-    .replace(/\([^)]+\)/g, '')
+    .replace(/^\s*(?:disc\s*)?\d{1,3}\s*[-_. ]\s*/i, '')
+    .replace(/\[[^\]]+\]/g, ' ')
+    .replace(/\((?:feat\.?|ft\.?|remaster|live|official)[^)]+\)/gi, ' ')
     .trim();
-  const parts = cleaned.split(/\s+-\s+| - | – | — /).map((part) => part.trim()).filter(Boolean);
-  const artist = parts.length > 1 ? parts[0] : undefined;
-  const track = parts.length > 1 ? parts.slice(1).join(' - ') : cleaned;
-  return { artist, track, query: [track, artist].filter(Boolean).join(' ') };
+  const parts = cleaned.split(/\s+-\s+|\s*__+\s*|\s+[|~–—]\s+|\s+by\s+/i).map((part) => part.trim()).filter(Boolean);
+  const candidates: TrackCandidate[] = [];
+  const add = (track: string, artist?: string, album?: string) => {
+    if (track) candidates.push({ track, artist, album, query: [track, artist, album].filter(Boolean).join(' ') });
+  };
+  if (parts.length > 1) {
+    add(parts.slice(1).join(' - '), parts[0]);
+    add(parts[0], parts.slice(1).join(' - '));
+  } else {
+    add(cleaned);
+  }
+  const parentFolder = path.basename(path.dirname(filePath));
+  if (parentFolder) add(cleaned, parentFolder);
+  return candidates;
+}
+
+async function getTrackCandidates(filePath: string): Promise<TrackCandidate[]> {
+  const candidates = parseFilename(filePath);
+  try {
+    const metadata = await parseFile(filePath, { skipCovers: true });
+    const track = metadata.common.title?.trim();
+    const artist = metadata.common.artist?.trim() || metadata.common.albumartist?.trim();
+    const album = metadata.common.album?.trim();
+    if (track) candidates.unshift({ track, artist, album, query: [track, artist, album].filter(Boolean).join(' ') });
+  } catch {
+    // Filename candidates remain available when a file has no readable tags.
+  }
+  return candidates.filter((candidate, index, all) => (
+    all.findIndex((other) => normalizeText(other.query) === normalizeText(candidate.query)) === index
+  ));
 }
 
 function sleep(milliseconds: number): Promise<void> {
@@ -217,26 +270,40 @@ async function findPlaylist(token: string, userId: string, name: string): Promis
 }
 
 async function searchTrack(token: string, filePath: string): Promise<any | null> {
-  const candidate = parseFilename(filePath);
-  const url = new URL('https://api.spotify.com/v1/search');
-  url.searchParams.set('type', 'track');
-  url.searchParams.set('limit', '5');
-  url.searchParams.set('market', 'from_token');
-  url.searchParams.set('q', candidate.query.replace(/\s+/g, ' ').trim());
-  const data = await (await spotifyFetch(token, url.toString())).json() as any;
-  const items = data?.tracks?.items || [];
-  const targetArtist = candidate.artist?.toLowerCase();
-  const targetTrack = candidate.track.toLowerCase();
-  return items.map((item: any) => {
-    const artists = (item.artists || []).map((artist: any) => artist.name.toLowerCase());
-    const trackName = String(item.name || '').toLowerCase();
-    let score = 0;
-    if (trackName === targetTrack) score += 10;
-    if (trackName.includes(targetTrack)) score += 4;
-    if (targetArtist && artists.some((name: string) => name === targetArtist)) score += 8;
-    if (targetArtist && artists.some((name: string) => name.includes(targetArtist))) score += 3;
-    return { item, score };
-  }).sort((a: any, b: any) => b.score - a.score)[0]?.item || null;
+  const candidates = await getTrackCandidates(filePath);
+  let best: { item: any; score: number } | null = null;
+
+  for (const candidate of candidates) {
+    const url = new URL('https://api.spotify.com/v1/search');
+    url.searchParams.set('type', 'track');
+    url.searchParams.set('limit', '10');
+    url.searchParams.set('market', 'from_token');
+    url.searchParams.set('q', candidate.query.replace(/\s+/g, ' ').trim());
+    const data = await (await spotifyFetch(token, url.toString())).json() as any;
+
+    for (const item of data?.tracks?.items || []) {
+      const artistNames = (item.artists || []).map((artist: any) => artist.name);
+      const trackName = String(item.name || '');
+      const albumName = String(item.album?.name || '');
+      const normalizedTrack = normalizeText(trackName);
+      const targetTrack = normalizeText(candidate.track);
+      let score = tokenSimilarity(candidate.track, trackName) * 10;
+      if (normalizedTrack === targetTrack) score += 18;
+      else if (normalizedTrack.includes(targetTrack) || targetTrack.includes(normalizedTrack)) score += 8;
+      if (candidate.artist) {
+        const artistMatch = artistNames.some((artist: string) => normalizeText(artist) === normalizeText(candidate.artist!));
+        const artistSimilar = artistNames.some((artist: string) => tokenSimilarity(artist, candidate.artist!) >= 0.5);
+        if (artistMatch) score += 18;
+        else if (artistSimilar) score += 8;
+      }
+      if (candidate.album && normalizeText(albumName) === normalizeText(candidate.album)) score += 5;
+      if (!best || score > best.score) best = { item, score };
+    }
+  }
+
+  if (!best) return null;
+  const minimumScore = candidates.some((candidate) => candidate.artist) ? 24 : 14;
+  return best.score >= minimumScore ? best.item : null;
 }
 
 async function runImport(options: ImportOptions): Promise<void> {

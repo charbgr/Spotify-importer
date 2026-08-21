@@ -156,7 +156,17 @@ The report includes the playlist URL, the number of tracks matched during that r
 
 ## Filename Matching
 
-Filenames are interpreted using the common format:
+The desktop app combines several matching signals instead of requiring one filename format:
+
+- Embedded ID3 title, artist, album artist, and album tags when available
+- Artist-title and title-artist filename interpretations
+- Folder names as an additional artist hint
+- Track-number and disc-number prefixes
+- Separators such as `-`, `__`, `|`, `~`, en dash, em dash, and `by`
+- Accent, punctuation, and whitespace normalization
+- Confidence scoring that leaves ambiguous files as **failed** instead of silently importing a poor match
+
+The familiar format still works:
 
 ```text
 Artist - Track.mp3
