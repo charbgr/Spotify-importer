@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spotify Importer</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">LOCAL COLLECTION → SPOTIFY CATALOG</p>
+          <h1>Move the music<br /><em>you already love.</em></h1>
+        </div>
+        <div class="mark">S<span>↗</span></div>
+      </header>
+
+      <section class="workspace">
+        <div class="controls">
+          <div id="dropzone" class="dropzone" tabindex="0">
+            <div class="drop-icon">↓</div>
+            <p class="drop-title">Drop an MP3 folder here</p>
+            <p class="drop-subtitle">We’ll read filenames, find their Spotify matches,<br />and build a playlist you can play anywhere.</p>
+            <button id="choose" class="quiet-button">Choose folder</button>
+            <p id="folder" class="folder">No folder selected</p>
+          </div>
+
+          <div class="form-card">
+            <label>Spotify Client ID<input id="clientId" type="password" placeholder="Paste your Client ID" /></label>
+            <label>Playlist name<input id="playlistName" type="text" placeholder="Uses folder name" /></label>
+            <label>Description<textarea id="playlistDescription" rows="3">Imported from local MP3 files</textarea></label>
+            <button id="start" class="start-button" disabled>Start importing <span>↗</span></button>
+          </div>
+        </div>
+
+        <div class="status-panel">
+          <div class="status-heading">
+            <div><p class="eyebrow">IMPORT LEDGER</p><h2 id="summary">Waiting for a folder</h2></div>
+            <div id="counts" class="counts"></div>
+          </div>
+          <div class="progress-track"><div id="progress" class="progress-fill"></div></div>
+          <div id="log" class="log"><p class="empty">Your tracks will appear here as they move through the importer.</p></div>
+        </div>
+      </section>
+      <footer><span>Spotify Web API · PKCE authorization</span><span id="message">Ready</span></footer>
+    </main>
+    <script src="renderer.js"></script>
+  </body>
+</html>

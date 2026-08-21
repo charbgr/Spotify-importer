@@ -71,6 +71,39 @@ Classic Rock Hits (2026)
 
 If that playlist already exists and is owned by the current Spotify user, it is reused instead of creating another playlist.
 
+## Desktop App
+
+The repository also includes an Electron desktop app with a drag-and-drop interface and a live status ledger for every MP3.
+
+Build and launch it with:
+
+```bash
+npm run app
+```
+
+In the app, the Client ID field is a per-run override. You can paste a different Client ID there whenever needed. If `SPOTIFY_CLIENT_ID` is set before launching the app, it is loaded as the default value and can still be replaced in the field.
+
+```bash
+SPOTIFY_CLIENT_ID="your-client-id" npm run desktop
+```
+
+Then:
+
+1. Paste the Spotify Client ID into the Client ID field.
+2. Drag an MP3 folder onto the drop area, or choose it with the folder picker.
+3. Confirm the playlist name and description.
+4. Select **Start importing**.
+5. Approve Spotify access in the browser window that opens.
+
+Each file is shown with one of these statuses:
+
+- **not imported yet**: discovered in the selected folder but not processed
+- **matched**: a Spotify track was found and is being added
+- **imported**: the Spotify track was successfully added to the playlist
+- **failed**: no match was found or Spotify returned an error
+
+The app saves a checkpoint after every successful upload. If the app stops halfway through, select the same folder and playlist again; already imported files are restored as **imported** and the remaining files continue from the first unfinished item.
+
 ## Playlist Options
 
 Override the playlist name and description from the command line:
