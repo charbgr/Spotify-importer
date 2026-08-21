@@ -106,6 +106,8 @@ The app saves a checkpoint after every successful upload. If the app stops halfw
 
 Use **Pause** to temporarily stop before the next Spotify operation. Use **Cancel** to stop the run; completed uploads remain checkpointed and will be skipped when you run the same folder again.
 
+When a run finishes with failures, use **Retry failed tracks** to retry the failed files from the same screen. Successfully imported files remain skipped.
+
 ## Playlist Options
 
 Override the playlist name and description from the command line:

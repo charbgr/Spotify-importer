@@ -4,6 +4,7 @@ const choose = document.getElementById('choose');
 const start = document.getElementById('start');
 const pause = document.getElementById('pause');
 const cancel = document.getElementById('cancel');
+const retry = document.getElementById('retry');
 const folderLabel = document.getElementById('folder');
 const playlistName = document.getElementById('playlistName');
 const playlistDescription = document.getElementById('playlistDescription');
@@ -36,6 +37,7 @@ function render() {
   summary.textContent = files.length ? `${imported} of ${files.length} imported` : 'Waiting for a folder';
   counts.innerHTML = `<span class="count imported">${imported} imported</span><span class="count matched">${matched} matched</span><span class="count failed">${failed} failed</span><span class="count pending">${pending} waiting</span>`;
   progress.style.width = `${files.length ? ((imported + failed) / files.length) * 100 : 0}%`;
+  retry.disabled = state.importing || failed === 0;
   log.innerHTML = files.length ? files.map((file) => `<div class="file-row"><span class="file-dot ${statusClass(file.status)}"></span><span class="file-name" title="${esc(file.path)}">${esc(file.name)}</span><span class="file-detail">${esc(file.detail || '')}</span><span class="badge ${statusClass(file.status)}">${esc(file.status)}</span></div>`).join('') : '<p class="empty">Your tracks will appear here as they move through the importer.</p>';
 }
 
@@ -68,6 +70,7 @@ function receive(event) {
     start.disabled = false;
     pause.disabled = true;
     cancel.disabled = true;
+    render();
     message.textContent = event.message || 'Import failed';
   } else if (event.type === 'paused' || event.type === 'resumed') {
     pause.textContent = event.type === 'paused' ? 'Resume' : 'Pause';
@@ -85,7 +88,7 @@ dropzone.addEventListener('drop', async (event) => {
   const file = event.dataTransfer.files[0];
   if (file) setFolder(window.spotifyImporter.getDroppedPath(file));
 });
-start.addEventListener('click', async () => {
+async function beginImport() {
   state.importing = true;
   state.files.clear();
   start.disabled = true;
@@ -95,7 +98,9 @@ start.addEventListener('click', async () => {
   message.textContent = 'Preparing import...';
   render();
   await window.spotifyImporter.startImport({ folder: state.folder, clientId: clientId.value, playlistName: playlistName.value || state.folder.split(/[\\/]/).filter(Boolean).pop(), playlistDescription: playlistDescription.value });
-});
+}
+start.addEventListener('click', beginImport);
+retry.addEventListener('click', beginImport);
 pause.addEventListener('click', () => window.spotifyImporter.pauseImport());
 cancel.addEventListener('click', () => window.spotifyImporter.cancelImport());
 window.spotifyImporter.onEvent(receive);
