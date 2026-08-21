@@ -28,6 +28,10 @@ input:focus, textarea:focus { border-color: #e2b84c; }
 .start-button { width: 100%; margin-top: 9px; padding: 14px 16px; border: 0; color: var(--ink); background: #e2b84c; cursor: pointer; font-weight: 600; text-align: left; }
 .start-button span { float: right; font-size: 20px; }
 .start-button:disabled { opacity: .4; cursor: not-allowed; }
+.import-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 9px; }
+.secondary-button, .cancel-button { padding: 10px 12px; border: 1px solid #57534b; color: var(--paper); background: transparent; cursor: pointer; }
+.secondary-button:hover { border-color: #e2b84c; color: #e2b84c; }.cancel-button:hover { border-color: var(--orange); color: var(--orange); }
+.secondary-button:disabled, .cancel-button:disabled { opacity: .3; cursor: not-allowed; }
 .status-panel { margin-top: 24px; border-top: 1px solid var(--ink); }
 .status-heading { display: flex; justify-content: space-between; align-items: end; padding: 24px 0 15px; }
 h2 { margin: 0; font-size: 24px; letter-spacing: -.04em; }

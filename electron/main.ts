@@ -29,6 +29,13 @@ type ImportOptions = {
 
 let mainWindow: BrowserWindow | null = null;
 let importing = false;
+let importControl: { paused: boolean; cancelled: boolean; controller: AbortController } | null = null;
+
+class ImportCancelledError extends Error {
+  constructor() {
+    super('Import cancelled.');
+  }
+}
 
 function send(payload: Record<string, unknown>): void {
   mainWindow?.webContents.send('import-event', payload);
@@ -59,10 +66,19 @@ function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+async function waitForResume(): Promise<void> {
+  while (importControl?.paused && !importControl.cancelled) {
+    await sleep(250);
+  }
+  if (importControl?.cancelled) throw new ImportCancelledError();
+}
+
 async function spotifyFetch(token: string, url: string, init: RequestInit = {}): Promise<Response> {
   for (let attempt = 0; attempt < 6; attempt += 1) {
+    await waitForResume();
     const response = await fetch(url, {
       ...init,
+      signal: importControl?.controller.signal,
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -79,6 +95,7 @@ async function spotifyFetch(token: string, url: string, init: RequestInit = {}):
       await sleep(delay);
       continue;
     }
+    if (importControl?.cancelled) throw new ImportCancelledError();
     throw new Error(`${init.method || 'GET'} ${url} failed: ${response.status} ${await response.text()}`);
   }
   throw new Error('Spotify request failed after multiple retries.');
@@ -233,6 +250,7 @@ async function runImport(options: ImportOptions): Promise<void> {
     if (imported.has(filePath)) continue;
     const file = statuses.get(filePath)!;
     try {
+      await waitForResume();
       const track = await searchTrack(token, filePath);
       if (!track) {
         file.status = 'failed';
@@ -253,10 +271,16 @@ async function runImport(options: ImportOptions): Promise<void> {
       progress.imported = [...imported];
       writeProgress(options.folder, progress);
     } catch (error) {
+      if (error instanceof ImportCancelledError || importControl?.cancelled) break;
       file.status = 'failed';
       file.detail = error instanceof Error ? error.message : String(error);
       send({ type: 'status', file });
     }
+  }
+
+  if (importControl?.cancelled) {
+    send({ type: 'cancelled', message: 'Import cancelled. Completed files are saved and will be skipped next time.' });
+    return;
   }
 
   const failed = [...statuses.values()].filter((file) => file.status === 'failed').length;
@@ -287,13 +311,27 @@ ipcMain.handle('get-default-client-id', () => process.env.SPOTIFY_CLIENT_ID || '
 ipcMain.handle('start-import', async (_event, options: ImportOptions) => {
   if (importing) throw new Error('An import is already running.');
   importing = true;
+  importControl = { paused: false, cancelled: false, controller: new AbortController() };
   try {
     await runImport(options);
   } catch (error) {
     send({ type: 'error', message: error instanceof Error ? error.message : String(error) });
   } finally {
     importing = false;
+    importControl = null;
   }
+});
+
+ipcMain.handle('pause-import', () => {
+  if (!importControl) return;
+  importControl.paused = !importControl.paused;
+  send({ type: importControl.paused ? 'paused' : 'resumed', message: importControl.paused ? 'Import paused.' : 'Import resumed.' });
+});
+
+ipcMain.handle('cancel-import', () => {
+  if (!importControl) return;
+  importControl.cancelled = true;
+  importControl.controller.abort();
 });
 
 app.whenReady().then(() => {

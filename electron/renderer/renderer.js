@@ -2,6 +2,8 @@ const state = { folder: '', files: new Map(), importing: false };
 const dropzone = document.getElementById('dropzone');
 const choose = document.getElementById('choose');
 const start = document.getElementById('start');
+const pause = document.getElementById('pause');
+const cancel = document.getElementById('cancel');
 const folderLabel = document.getElementById('folder');
 const playlistName = document.getElementById('playlistName');
 const playlistDescription = document.getElementById('playlistDescription');
@@ -49,12 +51,27 @@ function receive(event) {
   } else if (event.type === 'complete') {
     state.importing = false;
     start.disabled = false;
+    pause.disabled = true;
+    cancel.disabled = true;
     message.textContent = event.message || 'Import complete';
+    render();
+  } else if (event.type === 'cancelled') {
+    state.importing = false;
+    start.disabled = false;
+    pause.disabled = true;
+    cancel.disabled = true;
+    pause.textContent = 'Pause';
+    message.textContent = event.message || 'Import cancelled';
     render();
   } else if (event.type === 'error') {
     state.importing = false;
     start.disabled = false;
+    pause.disabled = true;
+    cancel.disabled = true;
     message.textContent = event.message || 'Import failed';
+  } else if (event.type === 'paused' || event.type === 'resumed') {
+    pause.textContent = event.type === 'paused' ? 'Resume' : 'Pause';
+    message.textContent = event.message || 'Working';
   }
 }
 
@@ -72,10 +89,15 @@ start.addEventListener('click', async () => {
   state.importing = true;
   state.files.clear();
   start.disabled = true;
+  pause.disabled = false;
+  cancel.disabled = false;
+  pause.textContent = 'Pause';
   message.textContent = 'Preparing import...';
   render();
   await window.spotifyImporter.startImport({ folder: state.folder, clientId: clientId.value, playlistName: playlistName.value || state.folder.split(/[\\/]/).filter(Boolean).pop(), playlistDescription: playlistDescription.value });
 });
+pause.addEventListener('click', () => window.spotifyImporter.pauseImport());
+cancel.addEventListener('click', () => window.spotifyImporter.cancelImport());
 window.spotifyImporter.onEvent(receive);
 window.spotifyImporter.getDefaultClientId().then((defaultClientId) => {
   if (defaultClientId) {

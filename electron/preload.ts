@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('spotifyImporter', {
   chooseFolder: () => ipcRenderer.invoke('choose-folder'),
   getDefaultClientId: () => ipcRenderer.invoke('get-default-client-id'),
   getDroppedPath: (file: File) => webUtils.getPathForFile(file),
+  pauseImport: () => ipcRenderer.invoke('pause-import'),
+  cancelImport: () => ipcRenderer.invoke('cancel-import'),
   startImport: (options: { folder: string; playlistName: string; playlistDescription: string; clientId: string }) => (
     ipcRenderer.invoke('start-import', options)
   ),
@@ -36,6 +38,8 @@ declare global {
       chooseFolder: () => Promise<string | null>;
       getDefaultClientId: () => Promise<string>;
       getDroppedPath: (file: File) => string;
+      pauseImport: () => Promise<void>;
+      cancelImport: () => Promise<void>;
       startImport: (options: { folder: string; playlistName: string; playlistDescription: string; clientId: string }) => Promise<void>;
       onEvent: (callback: (event: ImportEvent) => void) => () => void;
     };

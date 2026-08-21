@@ -104,6 +104,8 @@ Each file is shown with one of these statuses:
 
 The app saves a checkpoint after every successful upload. If the app stops halfway through, select the same folder and playlist again; already imported files are restored as **imported** and the remaining files continue from the first unfinished item.
 
+Use **Pause** to temporarily stop before the next Spotify operation. Use **Cancel** to stop the run; completed uploads remain checkpointed and will be skipped when you run the same folder again.
+
 ## Playlist Options
 
 Override the playlist name and description from the command line:
