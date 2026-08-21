@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Spotify Importer mark</title>
+  <desc id="desc">An abstract record with an import arrow and signal arc</desc>
+  <rect width="256" height="256" rx="64" fill="#1c1b18"/>
+  <circle cx="112" cy="128" r="65" fill="#1f7a58"/>
+  <circle cx="112" cy="128" r="13" fill="#f5f0e8"/>
+  <path d="M112 76c27 0 48 7 67 21M112 101c20 0 37 5 51 14M112 126c14 0 26 3 36 9" fill="none" stroke="#f5f0e8" stroke-linecap="round" stroke-width="9"/>
+  <path d="M172 161v36m0 0-18-18m18 18 18-18" fill="none" stroke="#e2b84c" stroke-linecap="round" stroke-linejoin="round" stroke-width="10"/>
+</svg>

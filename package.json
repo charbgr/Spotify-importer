@@ -1,8 +1,10 @@
 {
   "name": "spotify-import",
+  "productName": "Spotify Importer",
   "version": "0.1.0",
   "description": "Import local MP3 filenames as Spotify tracks into a playlist.",
   "private": true,
+  "author": "charbgr",
   "license": "UNLICENSED",
   "scripts": {
     "build": "npm run prisma:generate && nest build",

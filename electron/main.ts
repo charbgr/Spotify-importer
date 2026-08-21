@@ -291,6 +291,7 @@ async function runImport(options: ImportOptions): Promise<void> {
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
+    title: 'Spotify Importer',
     width: 1180,
     height: 820,
     minWidth: 900,
