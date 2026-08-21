@@ -2,6 +2,33 @@
 
 Import a folder of local MP3 files into a Spotify playlist by matching each filename to a Spotify catalog track. The MP3 files are never uploaded to Spotify; the script adds Spotify track URIs to the playlist, so the playlist works on mobile and other devices.
 
+## Final App Summary
+
+Spotify Importer is an Electron desktop app for turning a local MP3 collection into a normal Spotify playlist. Users drag and drop a folder, authorize Spotify in the browser, and watch every file move through a live import ledger.
+
+The finished app includes:
+
+- Drag-and-drop folder importing with a folder picker fallback
+- Spotify Client ID input with environment-variable defaults and per-run overrides
+- Playlist name and description controls
+- Automatic playlist reuse instead of duplicate playlist creation
+- ID3 metadata matching plus flexible filename matching and confidence scoring
+- Live statuses: **not imported yet**, **matched**, **imported**, and **failed**
+- Pause, resume, and cancel controls
+- Automatic retries with a human-readable live rate-limit countdown
+- Checkpointed progress so interrupted imports resume safely
+- A **Retry failed tracks** action after an import finishes
+- Final JSON reports with playlist details and file results
+
+Quick start:
+
+```bash
+git clone git@github.com:charbgr/spotify-importer.git
+cd spotify-importer
+npm install
+npm run app
+```
+
 ## Requirements
 
 - macOS, Linux, or Windows
@@ -84,7 +111,7 @@ npm run app
 In the app, the Client ID field is a per-run override. You can paste a different Client ID there whenever needed. If `SPOTIFY_CLIENT_ID` is set before launching the app, it is loaded as the default value and can still be replaced in the field.
 
 ```bash
-SPOTIFY_CLIENT_ID="your-client-id" npm run desktop
+SPOTIFY_CLIENT_ID="your-client-id" npm run app
 ```
 
 Then:
