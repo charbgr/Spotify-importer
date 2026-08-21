@@ -66,6 +66,33 @@ function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+function formatDuration(milliseconds: number): string {
+  let seconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const days = Math.floor(seconds / 86_400);
+  seconds %= 86_400;
+  const hours = Math.floor(seconds / 3_600);
+  seconds %= 3_600;
+  const minutes = Math.floor(seconds / 60);
+  seconds %= 60;
+  const parts: string[] = [];
+  if (days) parts.push(`${days} day${days === 1 ? '' : 's'}`);
+  if (hours) parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+  if (minutes) parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
+  if (seconds || !parts.length) parts.push(`${seconds} second${seconds === 1 ? '' : 's'}`);
+  return parts.join(' ');
+}
+
+async function waitForRateLimit(milliseconds: number): Promise<void> {
+  const endTime = Date.now() + milliseconds;
+  while (true) {
+    if (importControl?.cancelled) throw new ImportCancelledError();
+    const remaining = endTime - Date.now();
+    if (remaining <= 0) return;
+    send({ type: 'message', message: `Spotify rate limit reached. Retrying in ${formatDuration(remaining)}...` });
+    await sleep(Math.min(1_000, remaining));
+  }
+}
+
 async function waitForResume(): Promise<void> {
   while (importControl?.paused && !importControl.cancelled) {
     await sleep(250);
@@ -91,8 +118,7 @@ async function spotifyFetch(token: string, url: string, init: RequestInit = {}):
       const delay = Number.isFinite(retryAfter) && retryAfter > 0
         ? retryAfter * 1000
         : Math.min(30_000, 1_000 * 2 ** attempt);
-      send({ type: 'message', message: `Spotify rate limit. Retrying in ${Math.ceil(delay / 1000)}s...` });
-      await sleep(delay);
+      await waitForRateLimit(delay);
       continue;
     }
     if (importControl?.cancelled) throw new ImportCancelledError();
